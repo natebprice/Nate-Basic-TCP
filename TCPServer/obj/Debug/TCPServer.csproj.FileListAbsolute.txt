@@ -8,3 +8,9 @@ C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\obj\Debug\TCPServer.cspr
 C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\obj\Debug\TCPServer.csproj.CoreCompileInputs.cache
 C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\obj\Debug\TCPServer.exe
 C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\obj\Debug\TCPServer.pdb
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\bin\Debug\TCPServer.exe.config
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\bin\Debug\TCPServer.exe
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\bin\Debug\TCPServer.pdb
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\bin\Debug\Utils.dll
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\bin\Debug\Utils.pdb
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPServer\obj\Debug\TCPServer.csproj.CopyComplete

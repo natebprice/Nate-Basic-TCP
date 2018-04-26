@@ -3,9 +3,7 @@
 // https://www.codeproject.com/Articles/1415/Introduction-to-TCP-client-server-in-C
 // but then further modified by me.
 
-
 /*       Client Program      */
-
 
 using System;
 //using System.Collections.Generic;
@@ -15,70 +13,25 @@ using System;
 using System.Configuration;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Net.Sockets;
 using System.Threading;
+using NateBasicTCP.Utils;
 
-namespace TCPClient
+namespace NateBasicTCP.TCPClient
 {
     class Program
     {
         private static string hostName = ConfigurationManager.AppSettings["HostName"];
-        private static int sockTimeout = Int32.Parse(ConfigurationManager.AppSettings["ConnectTimeoutSecs"]) * 1000;
+        private static int sockTimeout = Int32.Parse(ConfigurationManager.AppSettings["ConnectTimeoutSecs"]);
         private static int hostPort = Int32.Parse(ConfigurationManager.AppSettings["HostPort"]);
 
         public static void Main()
         {
+            IPAddress myIP = TCPUtils.GetIPV4FromHostName(hostName);
             try
             {
-
-                // go through a bunch of rigamarole to use the "localhost" DNS name. It would be easier to 
-                // use a quoted literal address in dotted-quad notation, but this is more interesting.
-
-                // Also this doesn't work because the first item in the address list may not be the right
-                // address family (ipv4), but we'll use this to initialize a value
-                //IPAddress myIP = Dns.GetHostEntry(hostName).AddressList[0];
-                IPAddress myIP = IPAddress.Parse("0.0.0.0");
-
-                // Get localhost-related information. An IPHostEntry is an array of IPaddress
-                IPHostEntry myself = Dns.GetHostEntry(hostName);
-                foreach (IPAddress curAdd in myself.AddressList)
-                {
-                    // Display the type of address family supported by the server. If the
-                    // server is IPv6-enabled this value is: InternNetworkV6. If the server
-                    // is also IPv4-enabled there will be an additional value of InterNetwork.
-                    Console.WriteLine("AddressFamily: " + curAdd.AddressFamily.ToString());
-
-                    // Display the ScopeId property in case of IPV6 addresses.
-                    if (curAdd.AddressFamily.ToString() == ProtocolFamily.InterNetworkV6.ToString())
-                        Console.WriteLine("Scope Id: " + curAdd.ScopeId.ToString());
-
-                    // Display the server IP address in the standard format. In 
-                    // IPv4 the format will be dotted-quad notation, in IPv6 it will be
-                    // in in colon-hexadecimal notation.
-                    Console.WriteLine("Address: " + curAdd.ToString());
-
-                    // Display the server IP address in byte format.
-                    Console.Write("AddressBytes: ");
-                    Byte[] bytes = curAdd.GetAddressBytes();
-                    for (int i = 0; i < bytes.Length; i++)
-                    {
-                        Console.Write(bytes[i]);
-                    }
-
-                    Console.WriteLine("\r\n");
-
-                    // If this is IPv4 then this is the address we want, and we can break out of the loop
-                    if (curAdd.AddressFamily.ToString() == ProtocolFamily.InterNetwork.ToString())
-                    {
-                        myIP = curAdd;
-                        break;
-                    }
-
-                }
-
-                Console.WriteLine("AddressFamily: " + myIP.AddressFamily.ToString());
-                Console.WriteLine("Ip address for localhost: " + myIP.ToString());
 
                 TcpClient tcpclnt = new TcpClient();
                 // Inner try clause. We want to intercept socket connection failures, try again after 
@@ -90,11 +43,6 @@ namespace TCPClient
                         Console.WriteLine("Connecting to {0:S} on port {1:D}...", hostName, hostPort);
                         //Console.WriteLine("Connecting...");
                         tcpclnt.Connect(myIP, hostPort);
-                        if (!tcpclnt.Connected)
-                        {
-                            //Thread.Sleep(sockTimeout);
-                            Thread.Sleep(sockTimeout);
-                        }
                     }
                     // Inner catch clause. We want to intercept socket connection failures here.
                     // But we are only catching socket exceptions; anything else will blow up the program
@@ -103,6 +51,18 @@ namespace TCPClient
                         Console.WriteLine("Inner SocketException: " + e.ToString());
                         // Console.WriteLine("Exception: " + e.GetType().ToString());
                         // Console.WriteLine("Error..... " + e.StackTrace);
+                    }
+                    if (!tcpclnt.Connected)
+                    {
+                        // Wait "socktimeout" seconds and then we'll try again
+                        DateTime timer = DateTime.Now;
+                        long elapsed;
+                        while (TCPUtils.ElapsedSecondsSince(timer) < sockTimeout)
+                        {
+                            // elapsed = TCPUtils.ElapsedSecondsSince(timer);
+                            // Console.WriteLine("Connect retry loop: elapsed seconds: " + elapsed.ToString());
+                            Thread.Sleep(1000);
+                        }
                     }
 
                 }

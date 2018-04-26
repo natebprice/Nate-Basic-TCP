@@ -4,10 +4,10 @@
 // and subsequently modified by me.
 /*   Server Program    */
 
-TO-DO LIST NPB 4/6/2018:
-    * Add in some configured variables as in the client
-    * More try-catch to go back to listening if the connection is broken
-    * Idle timer. Use system time arithmetic
+//TO-DO LIST NPB 4/6/2018:
+//    * Add in some configured variables as in the client
+//    * More try-catch to go back to listening if the connection is broken
+//    * Idle timer. Use system time arithmetic
 using System;
 using System.Text;
 using System.Net;
@@ -15,57 +15,74 @@ using System.Net.Sockets;
 using System.Configuration;
 using System.IO;
 using System.Threading;
+using NateBasicTCP.Utils;
 
 
 
-namespace TCPServer
+namespace NateBasicTCP.TCPServer
 {
     class Program
     {
+        private static string hostName = ConfigurationManager.AppSettings["HostName"];
+        private static int hostPort = Int32.Parse(ConfigurationManager.AppSettings["HostPort"]);
+        private static int idleTimeout = Int32.Parse(ConfigurationManager.AppSettings["ConnectionIdleTimeoutSecs"]);
+        private static int recvBufSize = Int32.Parse(ConfigurationManager.AppSettings["ReceiveBufferSize"]);
+
         public static void Main()
         {
+            IPAddress myIP = TCPUtils.GetIPV4FromHostName(hostName);
+            TcpListener myList;
+            // In this outer block, if we have an error we are done.
             try
             {
-                // Use the "localhost" address
-                IPAddress ipAd = IPAddress.Parse("127.0.0.1");
-                // use local m/c IP address, and 
-                // use the same in the client
-
                 /* Initializes the Listener */
-                TcpListener myList = new TcpListener(ipAd, 8001);
+                myList = new TcpListener(myIP, hostPort);
 
                 /* Start Listening at the specified port */
                 myList.Start();
 
-                Console.WriteLine("The server is running at port 8001...");
-                Console.WriteLine("The local End point is  :" +
-                                  myList.LocalEndpoint);
-                Console.WriteLine("Waiting for a connection.....");
+                Boolean connected = false;
 
-                Socket s = myList.AcceptSocket();
-                Console.WriteLine("Connection accepted from " + s.RemoteEndPoint);
-
-                while (true)
+                while (!connected)
                 {
-                    byte[] b = new byte[100];
-                    int k = s.Receive(b);
-                    Console.WriteLine("\nReceived...");
-                    for (int i = 0; i < k; i++)
-                        Console.Write(Convert.ToChar(b[i]));
+                    Console.WriteLine("TCP server local end point: " + myList.LocalEndpoint);
+                    Console.WriteLine("Waiting for a connection.....");
+                    Socket s = myList.AcceptSocket();
+                    Console.WriteLine("Connection accepted from " + s.RemoteEndPoint);
+                    connected = true;
+                    // DateTime connectionStartTime = DateTime.Now;
+                    // while (TCPUtils.ElapsedSecondsSince(timer) < sockTimeout)
 
-                    ASCIIEncoding asen = new ASCIIEncoding();
-                    s.Send(asen.GetBytes("The string was received by the server."));
-                    Console.WriteLine("\nSent Acknowledgement");
+                        while (connected)
+                    {
+                        byte[] b = new byte[recvBufSize];
+                        try
+                        {
+                            int k = s.Receive(b);
+                            Console.WriteLine("\nReceived...");
+                            for (int i = 0; i < k; i++)
+                                Console.Write(Convert.ToChar(b[i]));
+
+                            ASCIIEncoding asen = new ASCIIEncoding();
+                            s.Send(asen.GetBytes("The string was received by the server."));
+                            Console.WriteLine("\nSent Acknowledgement");
+                        }
+                        catch (SocketException e)
+                        {
+                            Console.WriteLine("Exception: " + e.ToString());
+                            // Console.WriteLine("Error..... " + e.StackTrace);
+                            s.Close();
+                            connected = false;
+                        }
+                    }
                 }
-                /* clean up */
-                s.Close();
-                myList.Stop();
-
+                    /* clean up */
+                    myList.Stop();
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.ToString());
-                Console.WriteLine("Error..... " + e.StackTrace);
+                // Console.WriteLine("Error..... " + e.StackTrace);
             }
         } // end Main
     } // end Class

@@ -5,3 +5,13 @@ C:\Users\np47\Documents\GitHub\datasci\Nate Basic TCP\TCPClient\obj\Debug\TCPCli
 C:\Users\np47\Documents\GitHub\datasci\Nate Basic TCP\TCPClient\obj\Debug\TCPClient.csproj.CoreCompileInputs.cache
 C:\Users\np47\Documents\GitHub\datasci\Nate Basic TCP\TCPClient\obj\Debug\TCPClient.exe
 C:\Users\np47\Documents\GitHub\datasci\Nate Basic TCP\TCPClient\obj\Debug\TCPClient.pdb
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\bin\Debug\TCPClient.exe.config
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\bin\Debug\TCPClient.exe
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\bin\Debug\TCPClient.pdb
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.csprojResolveAssemblyReference.cache
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.csproj.CoreCompileInputs.cache
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.exe
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.pdb
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\bin\Debug\Utils.dll
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\bin\Debug\Utils.pdb
+C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.csproj.CopyComplete
