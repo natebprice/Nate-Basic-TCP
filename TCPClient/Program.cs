@@ -15,7 +15,6 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Net.Sockets;
 using System.Threading;
 using NateBasicTCP.Utils;
 
@@ -32,88 +31,101 @@ namespace NateBasicTCP.TCPClient
             IPAddress myIP = TCPUtils.GetIPV4FromHostName(hostName);
             try
             {
-
-                TcpClient tcpclnt = new TcpClient();
-                // Inner try clause. We want to intercept socket connection failures, try again after 
-                // socktimeout seconds
-                while (!tcpclnt.Connected)
-                {
-                    try
-                    {
-                        Console.WriteLine("Connecting to {0:S} on port {1:D}...", hostName, hostPort);
-                        //Console.WriteLine("Connecting...");
-                        tcpclnt.Connect(myIP, hostPort);
-                    }
-                    // Inner catch clause. We want to intercept socket connection failures here.
-                    // But we are only catching socket exceptions; anything else will blow up the program
-                    catch (SocketException e)
-                    {
-                        Console.WriteLine("Inner SocketException: " + e.ToString());
-                        // Console.WriteLine("Exception: " + e.GetType().ToString());
-                        // Console.WriteLine("Error..... " + e.StackTrace);
-                    }
-                    if (!tcpclnt.Connected)
-                    {
-                        // Wait "socktimeout" seconds and then we'll try again
-                        DateTime timer = DateTime.Now;
-                        long elapsed;
-                        while (TCPUtils.ElapsedSecondsSince(timer) < sockTimeout)
-                        {
-                            // elapsed = TCPUtils.ElapsedSecondsSince(timer);
-                            // Console.WriteLine("Connect retry loop: elapsed seconds: " + elapsed.ToString());
-                            Thread.Sleep(1000);
-                        }
-                    }
-
-                }
-
-                Console.WriteLine("Connected");
-                // Loop until a null string is entered
+                // Outer loop: we enter this loop without an instantiated TCPClient object. If we get back to the
+                // top of the loop again it's because the client has been closed and we need to start it up again
                 while (true)
                 {
-                    Console.Write("Enter the string to be transmitted : ");
-
-                    String str = Console.ReadLine();
-                    if (str.Length == 0)
+                    TcpClient tcpclnt = new TcpClient();
+                    // Inner try clause. We want to intercept socket connection failures, try again after 
+                    // socktimeout seconds
+                    while (!tcpclnt.Connected)
                     {
-                        break;
+                        try
+                        {
+                            Console.WriteLine("Connecting to {0:S} on port {1:D}...", hostName, hostPort);
+                            //Console.WriteLine("Connecting...");
+                            tcpclnt.Connect(myIP, hostPort);
+                        }
+                        // Inner catch clause. We want to intercept socket connection failures here.
+                        // But we are only catching socket exceptions; anything else will blow up the program
+                        catch (SocketException e)
+                        {
+                            Console.WriteLine("Inner SocketException 1: " + e.ToString());
+                            // Console.WriteLine("Exception: " + e.GetType().ToString());
+                            // Console.WriteLine("Error..... " + e.StackTrace);
+                        }
+                        if (!tcpclnt.Connected)
+                        {
+                            // Wait "socktimeout" seconds and then we'll try again
+                            DateTime timer = DateTime.Now;
+                            while (TCPUtils.ElapsedSecondsSince(timer) < sockTimeout)
+                            {
+                                // elapsed = TCPUtils.ElapsedSecondsSince(timer);
+                                // Console.WriteLine("Connect retry loop: elapsed seconds: " + elapsed.ToString());
+                                Thread.Sleep(1000);
+                            }
+                        }
+                        Console.WriteLine("Connected");
+                    } // while (!tcpclnt.connected)
+
+                    // Loop until a null string is entered
+                    while (true)
+                    {
+                        Console.Write("Enter the string to be transmitted : ");
+
+                        String str = Console.ReadLine();
+                        if (str.Length == 0)
+                        {
+                            break;
+                        }
+
+                        // Try clause for writing to and reading from the socket.
+                        // Catch exceptions like other end closed
+                        try
+                        {
+                            Stream stm = tcpclnt.GetStream();
+
+                            ASCIIEncoding asen = new ASCIIEncoding();
+                            byte[] ba = asen.GetBytes(str);
+                            Console.WriteLine("Transmitting.....");
+
+                            stm.Write(ba, 0, ba.Length);
+
+                            byte[] bb = new byte[100];
+                            int k = stm.Read(bb, 0, 100);
+
+                            for (int i = 0; i < k; i++)
+                                Console.Write(Convert.ToChar(bb[i]));
+                            Console.WriteLine("");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Inner Exception 2: " + e.ToString());
+                            Console.WriteLine("Exception Type: " + e.GetType().ToString());
+                            tcpclnt.Close();
+                            break;
+                        }
                     }
-
-                    Stream stm = tcpclnt.GetStream();
-
-                    ASCIIEncoding asen = new ASCIIEncoding();
-                    byte[] ba = asen.GetBytes(str);
-                    Console.WriteLine("Transmitting.....");
-
-                    stm.Write(ba, 0, ba.Length);
-
-                    byte[] bb = new byte[100];
-                    int k = stm.Read(bb, 0, 100);
-
-                    for (int i = 0; i < k; i++)
-                        Console.Write(Convert.ToChar(bb[i]));
-                    Console.WriteLine("");
-                }
-                tcpclnt.Close();
+                    tcpclnt.Close();
+                } // while (true()
             }
 
+            // We can have multiple catch clauses tailored to specific error conditions. These are all
+            // redundant because they don't do anything specific to the type of exception being caught.
             catch (SocketException e)
             {
                 Console.WriteLine("Outer Socket Exception: " + e.ToString());
                 Console.WriteLine("Exception: " + e.GetType().ToString());
-                Console.WriteLine("Error..... " + e.StackTrace);
             }
             catch (IOException e)
             {
                 Console.WriteLine("Outer IO Exception: " + e.ToString());
                 Console.WriteLine("Exception: " + e.GetType().ToString());
-                Console.WriteLine("Error..... " + e.StackTrace);
             }
             catch (Exception e)
             {
                 Console.WriteLine("Outer General Exception: " + e.ToString());
                 Console.WriteLine("Exception: " + e.GetType().ToString());
-                Console.WriteLine("Error..... " + e.StackTrace);
             }
         } // end public static void Main()
     } //class Program
