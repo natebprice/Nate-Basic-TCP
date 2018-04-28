@@ -124,35 +124,74 @@ namespace NateBasicTCP.AsyncTCPServer
                 // Read data from the client socket.   
                 int bytesRead = handler.EndReceive(ar);
 
+                //                // Data was read from the client socket.  
+                //                if (read > 0)
+                //                {
+                //                    state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, read));
+                //                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                //                        new AsyncCallback(readCallback), state);
+                //               }
+                //                else
+                //                {
+                //                    if (state.sb.Length > 1)
+                //                    {
+                //                        // All the data has been read from the client;  
+                //                        // display it on the console.  
+                //                        string content = state.sb.ToString();
+                //                       Console.WriteLine("Read {0} bytes from socket.\n Data : {1}",
+                //                           content.Length, content);
+                //                    }
+                //                    handler.Close();
+                //                }
+
                 if (bytesRead > 0)
                 {
-
                     Console.WriteLine("ReadCallBack: bytes received: " + bytesRead.ToString());
 
                     // There  might be more data, so store the data received so far.  
                     state.sb.Append(Encoding.ASCII.GetString(
                         state.buffer, 0, bytesRead));
 
-                    // Check for end-of-file tag. If it is not there, read   
-                    // more data.  
+                    // Look for end-of-record; if that's the case, echo string back to client,
+                    // zero out the receive buffer before resuming listen
                     content = state.sb.ToString();
-                    if (content.IndexOf("<EOF>") > -1)
+                    if (content.IndexOf("\n") != -1) // This is a cheat; should look only at end of buffer
                     {
-                        // All the data has been read from the   
-                        // client. Display it on the console.  
+                        // All data has been read. Display the data
                         Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
-                            content.Length, content);
+                                content.Length, content);
                         // Echo the data back to the client.  
                         Send(handler, content);
+
+                        // Initialize the string buffer for a new read
+                        state.sb = new StringBuilder();
                     }
-                    else
-                    {
-                        // Not all data received. Get more.  
-                        handler.BeginReceive(state.buffer, 0, StateObject.RecvBufSize, 0,
+                    // Start to listen again
+                    handler.BeginReceive(state.buffer, 0, StateObject.RecvBufSize, 0,
+                       new AsyncCallback(ReadCallback), state);
+                }
+                else
+                {
+                    // This section gets activated only if bytesRead = 0 or -1.
+                    // I don't think this code will ever be reached.
+                    // ReadCallBack only gets invoked if there is data to be read
+
+                    // All data has been read. Display the data
+                    content = state.sb.ToString();
+                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
+                            content.Length, content);
+                    // Echo the data back to the client.  
+                    Send(handler, content);
+
+                    // Initialize the string buffer for a new read
+                    state.sb = new StringBuilder();
+
+                    // Start to listen again
+                    handler.BeginReceive(state.buffer, 0, StateObject.RecvBufSize, 0,
                         new AsyncCallback(ReadCallback), state);
-                    }
                 }
             }
+
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
@@ -181,8 +220,8 @@ namespace NateBasicTCP.AsyncTCPServer
                 int bytesSent = handler.EndSend(ar);
                 Console.WriteLine("Sent {0} bytes to client.", bytesSent);
 
-                handler.Shutdown(SocketShutdown.Both);
-                handler.Close();
+                // .Shutdown(SocketShutdown.Both);
+                // handler.Close();
 
             }
             catch (Exception e)

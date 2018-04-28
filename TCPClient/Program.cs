@@ -78,6 +78,8 @@ namespace NateBasicTCP.TCPClient
                         {
                             break;
                         }
+                        // add back the terminating newline that we'll use as end-of-record separator
+                        str = str + "\n";
 
                         // Try clause for writing to and reading from the socket.
                         // Catch exceptions like other end closed
@@ -86,11 +88,22 @@ namespace NateBasicTCP.TCPClient
                             Stream stm = tcpclnt.GetStream();
 
                             ASCIIEncoding asen = new ASCIIEncoding();
-                            byte[] ba = asen.GetBytes(str);
+
+                            // HACK: Add a prefix with no trailing record separator
+                            string prefix = ":prefix:";
+                            byte[] ba = asen.GetBytes(prefix);
                             Console.WriteLine("Transmitting.....");
 
                             stm.Write(ba, 0, ba.Length);
 
+                            // Now send the terminated string
+                            //byte[] ba = asen.GetBytes(str);
+                            ba = asen.GetBytes(str);
+                            Console.WriteLine("Transmitting.....");
+
+                            stm.Write(ba, 0, ba.Length);
+
+                            // byte[] bb = new byte[100];
                             byte[] bb = new byte[100];
                             int k = stm.Read(bb, 0, 100);
 
