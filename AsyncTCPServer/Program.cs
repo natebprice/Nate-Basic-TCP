@@ -2,12 +2,19 @@
 // Most of this code is cribbed from 
 // https://docs.microsoft.com/en-us/dotnet/framework/network-programming/asynchronous-server-socket-example
 // then modified by me to include configuration variables and an idle timeout on connected sockets.
+// NBP 5/1/18:
+// The idle timeout was implemented using the System.Timers.Timer class and related methods
+// When idle time exceeds configured limit, socket is closed and exception is thrown.
+// This is done with a bit of a hack, making the connected socket a class-static variable that can be seen by all threads
+// There should be some sort of cleaner signaling mechanism that I haven't worked out, but this method
+// does work.
 
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Timers;
 using NateBasicTCP.Utils;
 using System.Configuration;
 
@@ -34,8 +41,65 @@ namespace NateBasicTCP.AsyncTCPServer
         private static int hostPort = Int32.Parse(ConfigurationManager.AppSettings["HostPort"]);
         private static int idleTimeout = Int32.Parse(ConfigurationManager.AppSettings["ConnectionIdleTimeoutSecs"]);
 
+        // This variable will be initalized when a connection is made
+        private static DateTime ConnectionIdleTimer;
+
+        private static System.Timers.Timer aTimer;
+
+        private static Socket connectedSocket;
+
         // Thread signal.  
         public static ManualResetEvent allDone = new ManualResetEvent(false);
+
+        private static void SetTimer()
+        {
+
+            Console.WriteLine("SetTimer()");
+
+            // Initialize our connection idle timer
+            ConnectionIdleTimer = DateTime.Now;
+
+            // Create a timer with a two second interval.
+            aTimer = new System.Timers.Timer(2000);
+            // Hook up the Elapsed event for the timer. 
+            aTimer.Elapsed += OnTimedEvent;
+            aTimer.AutoReset = true;
+            aTimer.Enabled = true;
+        }
+        private static void StopTimer()
+        {
+            // Clean up our timer
+            aTimer.AutoReset = false;
+            aTimer.Enabled = false;
+            aTimer.Stop();
+            aTimer.Dispose();
+        }
+
+        private static void OnTimedEvent(Object source, ElapsedEventArgs e)
+        {
+            long idleTime = TCPUtils.ElapsedSecondsSince(ConnectionIdleTimer);
+
+            Console.WriteLine("The Elapsed event was raised at {0:HH:mm:ss.fff}",
+                              e.SignalTime);
+            Console.WriteLine("The connection has been idle {0} seconds", idleTime);
+            try
+            {
+                if (idleTime > idleTimeout)
+                {
+                    Console.WriteLine("The connection has been idle for longer than the maximum {0} seconds. Closing connection", idleTimeout);
+                    StopTimer();
+                    connectedSocket.Shutdown(SocketShutdown.Both);
+                    connectedSocket.Close();
+                    throw new System.Net.Sockets.SocketException(10060);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+        }
 
         public AsynchronousSocketListener()
         {
@@ -65,7 +129,7 @@ namespace NateBasicTCP.AsyncTCPServer
             {
                 listener.Bind(localEndPoint);
                 listener.Listen(100);
-
+                
                 while (true)
                 {
                     // Set the event to nonsignaled state.  
@@ -79,6 +143,8 @@ namespace NateBasicTCP.AsyncTCPServer
 
                     // Wait until a connection is made before continuing.  
                     allDone.WaitOne();
+                    // Console.WriteLine("allDone.WaitOne() complete");
+
                 }
 
             }
@@ -87,7 +153,7 @@ namespace NateBasicTCP.AsyncTCPServer
                 Console.WriteLine(e.ToString());
             }
 
-            Console.WriteLine("\nPress ENTER to continue...");
+            Console.WriteLine("\nStartListening done. Press ENTER to continue...");
             Console.Read();
 
         }
@@ -99,14 +165,20 @@ namespace NateBasicTCP.AsyncTCPServer
 
             // Get the socket that handles the client request.  
             Socket listener = (Socket)ar.AsyncState;
-            Socket handler = listener.EndAccept(ar);
+            connectedSocket = listener.EndAccept(ar); // this is the class-global static variable
+
+            // Now we have a connected socket -- tell us about it.
+            Console.WriteLine("ACB: Connection accepted from " + connectedSocket.RemoteEndPoint);
+
+            // Initialize our timers
+            SetTimer();
 
             // Create the state object.  
             StateObject state = new StateObject();
-            state.workSocket = handler;
+            state.workSocket = connectedSocket;
             Console.WriteLine("AcceptCallBack: About to call BeginReceive");
 
-            handler.BeginReceive(state.buffer, 0, StateObject.RecvBufSize, 0,
+            connectedSocket.BeginReceive(state.buffer, 0, StateObject.RecvBufSize, 0,
                 new AsyncCallback(ReadCallback), state);
         }
 
@@ -124,28 +196,12 @@ namespace NateBasicTCP.AsyncTCPServer
                 // Read data from the client socket.   
                 int bytesRead = handler.EndReceive(ar);
 
-                //                // Data was read from the client socket.  
-                //                if (read > 0)
-                //                {
-                //                    state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, read));
-                //                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                //                        new AsyncCallback(readCallback), state);
-                //               }
-                //                else
-                //                {
-                //                    if (state.sb.Length > 1)
-                //                    {
-                //                        // All the data has been read from the client;  
-                //                        // display it on the console.  
-                //                        string content = state.sb.ToString();
-                //                       Console.WriteLine("Read {0} bytes from socket.\n Data : {1}",
-                //                           content.Length, content);
-                //                    }
-                //                    handler.Close();
-                //                }
-
                 if (bytesRead > 0)
                 {
+
+                    // Reset our connection idle timer
+                    ConnectionIdleTimer = DateTime.Now;
+
                     Console.WriteLine("ReadCallBack: bytes received: " + bytesRead.ToString());
 
                     // There  might be more data, so store the data received so far.  
@@ -172,29 +228,21 @@ namespace NateBasicTCP.AsyncTCPServer
                 }
                 else
                 {
-                    // This section gets activated only if bytesRead = 0 or -1.
-                    // I don't think this code will ever be reached.
-                    // ReadCallBack only gets invoked if there is data to be read
+                    // This section gets activated only if bytesRead <= 0.
+                    // This condition occurs if the other end has been closed.
 
-                    // All data has been read. Display the data
+                    // No more data to read; socket closed at other end
                     content = state.sb.ToString();
-                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
+                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}\nAssuming other end closed; throwing exception",
                             content.Length, content);
-                    // Echo the data back to the client.  
-                    Send(handler, content);
-
-                    // Initialize the string buffer for a new read
-                    state.sb = new StringBuilder();
-
-                    // Start to listen again
-                    handler.BeginReceive(state.buffer, 0, StateObject.RecvBufSize, 0,
-                        new AsyncCallback(ReadCallback), state);
+                    throw new System.Net.Sockets.SocketException(10054);
                 }
             }
 
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Console.WriteLine("ReadCallback loop: " + e.ToString());
+                StopTimer();
             }
 
         }

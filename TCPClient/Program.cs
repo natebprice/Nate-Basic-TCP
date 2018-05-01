@@ -16,6 +16,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Timers;
 using NateBasicTCP.Utils;
 
 namespace NateBasicTCP.TCPClient
@@ -25,10 +26,33 @@ namespace NateBasicTCP.TCPClient
         private static string hostName = ConfigurationManager.AppSettings["HostName"];
         private static int sockTimeout = Int32.Parse(ConfigurationManager.AppSettings["ConnectTimeoutSecs"]);
         private static int hostPort = Int32.Parse(ConfigurationManager.AppSettings["HostPort"]);
+        // private static System.Timers.Timer aTimer;
+
+
+        // private static void SetTimer()
+        // {
+        //   // Create a timer with a two second interval.
+        //    aTimer = new System.Timers.Timer(10000);
+        //    // Hook up the Elapsed event for the timer. 
+        //    aTimer.Elapsed += OnTimedEvent;
+        //    aTimer.AutoReset = true;
+        //    aTimer.Enabled = true;
+        // }
+
+        // private static void OnTimedEvent(Object source, ElapsedEventArgs e)
+        // {
+        //     Console.WriteLine("The Elapsed event was raised at {0:HH:mm:ss.fff}",
+        //                      e.SignalTime);
+        //}
 
         public static void Main()
         {
             IPAddress myIP = TCPUtils.GetIPV4FromHostName(hostName);
+
+            // // Start our timer which will interrupt us every ten seconds.
+            // SetTimer();
+
+
             try
             {
                 // Outer loop: we enter this loop without an instantiated TCPClient object. If we get back to the
@@ -58,6 +82,7 @@ namespace NateBasicTCP.TCPClient
                         {
                             // Wait "socktimeout" seconds and then we'll try again
                             DateTime timer = DateTime.Now;
+                            
                             while (TCPUtils.ElapsedSecondsSince(timer) < sockTimeout)
                             {
                                 // elapsed = TCPUtils.ElapsedSecondsSince(timer);
@@ -119,6 +144,7 @@ namespace NateBasicTCP.TCPClient
                             break;
                         }
                     }
+                    Console.WriteLine("Broke out of loop. Closing TCP client.");
                     tcpclnt.Close();
                 } // while (true()
             }
@@ -140,6 +166,10 @@ namespace NateBasicTCP.TCPClient
                 Console.WriteLine("Outer General Exception: " + e.ToString());
                 Console.WriteLine("Exception: " + e.GetType().ToString());
             }
+
+            // // Clean up our timer
+            // aTimer.Stop();
+            // aTimer.Dispose();
         } // end public static void Main()
     } //class Program
 } //namespace TCPClient
