@@ -6,10 +6,6 @@
 /*       Client Program      */
 
 using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
 using System.Configuration;
 using System.IO;
 using System.Net;
@@ -82,7 +78,7 @@ namespace NateBasicTCP.TCPClient
                         {
                             // Wait "socktimeout" seconds and then we'll try again
                             DateTime timer = DateTime.Now;
-                            
+
                             while (TCPUtils.ElapsedSecondsSince(timer) < sockTimeout)
                             {
                                 // elapsed = TCPUtils.ElapsedSecondsSince(timer);
@@ -90,7 +86,10 @@ namespace NateBasicTCP.TCPClient
                                 Thread.Sleep(1000);
                             }
                         }
-                        Console.WriteLine("Connected");
+                        else
+                        {
+                            Console.WriteLine("Connected");
+                        }
                     } // while (!tcpclnt.connected)
 
                     // Loop until a null string is entered
