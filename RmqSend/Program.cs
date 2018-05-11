@@ -1,4 +1,11 @@
-﻿using System;
+﻿// Simple RabbitMQ publishing client. To the simple model we add:
+//  * Persistent retry on startup if initial connection attempt fails
+//  * Enable built-in connection recovery; detect model/channel  shutdown and 
+//      do not attempt to publish user input until channel is reconnected
+//  * Make queue and publishing persistent; so messages published while no consumer
+//      is running will stay in the queue even if the broker restarts.
+
+using System;
 using RabbitMQ.Client;
 using System.Text;
 using System.Threading;
@@ -16,7 +23,11 @@ namespace RmqSend
         public static void Main()
         {
 
-            factory = new ConnectionFactory() { HostName = "helixlin1t.ynhh.org" };
+            // Set up the new connection factory and enable connection recovery with an interval of 20 seconds  
+            factory = new ConnectionFactory() { HostName = "helixlin1t.ynhh.org", UserName = "datasci", Password = "datascipw1!", RequestedHeartbeat = 30 };
+            factory.AutomaticRecoveryEnabled = true;
+            factory.NetworkRecoveryInterval = TimeSpan.FromSeconds(20);
+
 
             // Try to connect to our RabbitMQ server, wait and retry if not successful
             Boolean rmqConnected = false;
@@ -59,11 +70,18 @@ namespace RmqSend
                 // using (connection = factory.CreateConnection())
                 using (var channel = connection.CreateModel())
                 {
+                    IBasicProperties props = channel.CreateBasicProperties();
+                    props.DeliveryMode = 2; // persistent
+
                     channel.QueueDeclare(queue: "hello",
-                                         durable: false,
+                                         durable: true,
                                          exclusive: false,
                                          autoDelete: false,
                                          arguments: null);
+                    channel.ModelShutdown += (model, ea) =>
+                    {
+                        Console.WriteLine(" [xx] queue producer shutdown detected");
+                    };
 
                     while (true)
                     {
@@ -77,11 +95,18 @@ namespace RmqSend
                         // string message = "Hello World!";
                         var body = Encoding.UTF8.GetBytes(message);
 
-                        channel.BasicPublish(exchange: "",
-                                             routingKey: "hello",
-                                             basicProperties: null,
-                                             body: body);
-                        Console.WriteLine(" [x] Sent {0}", message);
+                        if (channel.IsOpen)
+                        {
+                            channel.BasicPublish(exchange: "",
+                                                 routingKey: "hello",
+                                                 basicProperties: props,
+                                                 body: body);
+                            Console.WriteLine(" [x] Sent {0}", message);
+                        }
+                        else
+                        {
+                            Console.WriteLine(" [xxx] Cannot send message on a closed channel; please try again.");
+                        }
                     }
                 }               
             }

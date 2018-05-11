@@ -15,3 +15,6 @@ C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.pdb
 C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\bin\Debug\Utils.dll
 C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\bin\Debug\Utils.pdb
 C:\Users\np47\Documents\GitHub\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.csproj.CopyComplete
+H:\Work\Data Science\Github Repos\Nate-Basic-TCP\TCPClient\bin\Debug\TCPClient.exe.config
+H:\Work\Data Science\Github Repos\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.exe
+H:\Work\Data Science\Github Repos\Nate-Basic-TCP\TCPClient\obj\Debug\TCPClient.pdb

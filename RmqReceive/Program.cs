@@ -1,4 +1,11 @@
-﻿using RabbitMQ.Client;
+﻿// Simple RabbitMQ consumer client. To the simple model we add:
+//  * Persistent retry on startup if initial connection attempt fails
+//  * Enable built-in connection recovery; detect model/channel shutdown
+//  * Make queue persistent; so messages published while no consumer
+//      is running will stay in the queue even if the broker restarts.
+
+
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System;
 using System.Text;
@@ -10,7 +17,7 @@ namespace RmqReceive
 {
     class Receive
     {
-        private const int RMQConnectTimeout = 30;
+        private const int RMQConnectTimeout = 40;
 
         private static ConnectionFactory factory;
         private static IConnection connection;
@@ -18,7 +25,10 @@ namespace RmqReceive
         public static void Main()
         {
 
-            factory = new ConnectionFactory() { HostName = "helixlin1t.ynhh.org" };
+            // Set up the new connection factory and enable connection recovery with an interval of 20 seconds  
+            factory = new ConnectionFactory() { HostName = "helixlin1t.ynhh.org", UserName = "datasci", Password = "datascipw1!", RequestedHeartbeat = 30 };
+            factory.AutomaticRecoveryEnabled = true;
+            factory.NetworkRecoveryInterval = TimeSpan.FromSeconds(20);
 
             // Try to connect to our RabbitMQ server, wait and retry if not successful
             Boolean rmqConnected = false;
@@ -60,14 +70,24 @@ namespace RmqReceive
             {
                 using (var channel = connection.CreateModel())
                 {
-                    channel.QueueDeclare(queue: "hello", durable: false, exclusive: false, autoDelete: false, arguments: null);
+                    channel.QueueDeclare(   queue: "hello", 
+                                            durable: true, 
+                                            exclusive: false, 
+                                            autoDelete: false, 
+                                            arguments: null);
 
                     var consumer = new EventingBasicConsumer(channel);
+        
                     consumer.Received += (model, ea) =>
                     {
                         var body = ea.Body;
+                     
                         var message = Encoding.UTF8.GetString(body);
                         Console.WriteLine(" [x] Received {0}", message);
+                    };
+                    consumer.Shutdown += (model, ea) =>
+                    {
+                        Console.WriteLine(" [xx] Queue consumer shutdown detected");
                     };
                     channel.BasicConsume(queue: "hello", autoAck: true, consumer: consumer);
 
